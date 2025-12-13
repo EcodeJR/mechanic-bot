@@ -1,0 +1,38 @@
+[
+  {
+    "part_id": "TC001",
+    "part_name": "Toyota Corolla 2010 Front Headlamp (Left)",
+    "vehicle": "Toyota Corolla",
+    "year": "2008-2013",
+    "price_NGN": 45000,
+    "stock_qty": 4,
+    "location": "Aisle B-3"
+  },
+  {
+    "part_id": "LXM002",
+    "part_name": "Lexus RX350 (2015) Brake Pad Set",
+    "vehicle": "Lexus RX350",
+    "year": "2010-2015",
+    "price_NGN": 28500,
+    "stock_qty": 12,
+    "location": "Aisle C-1"
+  },
+  {
+    "part_id": "HOA003",
+    "part_name": "Honda Accord (2006) Alternator/Dynamo",
+    "vehicle": "Honda Accord",
+    "year": "2003-2007",
+    "price_NGN": 38000,
+    "stock_qty": 2,
+    "location": "Bulk Storage"
+  },
+  {
+    "part_id": "MERZ004",
+    "part_name": "Mercedes Benz C300 Air Filter",
+    "vehicle": "Mercedes C-Class",
+    "year": "2014-2018",
+    "price_NGN": 8500,
+    "stock_qty": 50,
+    "location": "Aisle D-8"
+  }
+]

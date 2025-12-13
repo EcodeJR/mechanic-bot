@@ -1,0 +1,285 @@
+# 🚗 Mechanic Bot - WhatsApp Car Parts Finder
+
+A WhatsApp chatbot that helps users identify and find car parts using AI vision recognition and intelligent search. Users can send photos of car parts or text queries, and the bot will identify the part, search your inventory, and provide pricing and availability information.
+
+---
+
+## ✨ Features
+
+- **Image Recognition**: Send a photo of a car part → Bot identifies it using Google Gemini AI
+- **Text Search**: Describe a car part in text → Bot extracts key details and searches inventory
+- **Inventory Management**: Search through a JSON-based inventory database
+- **WhatsApp Integration**: Seamless WhatsApp Cloud API integration for messaging
+- **Fast & Free LLM**: Uses Groq's Llama 3.1 for intelligent part extraction
+- **Real-time Responses**: Instant part identification and availability checks
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: FastAPI (Python web framework)
+- **Vision AI**: Google Gemini 2.5 Flash-Lite (image analysis)
+- **Language Model**: Groq Llama 3.1-8b-instant (part extraction & NLP)
+- **WhatsApp API**: Meta's WhatsApp Cloud API v19.0
+- **Messaging**: Real-time WhatsApp message delivery
+
+---
+
+## 📋 Prerequisites
+
+Before running this project, ensure you have:
+
+1. **Python 3.8+** installed
+2. **API Keys** (sign up for free):
+   - [Groq API Key](https://console.groq.com) - Free Llama 3 access
+   - [Google Gemini API Key](https://aistudio.google.com/app/apikeys) - Free vision AI
+   - [Meta WhatsApp Business Account](https://developers.facebook.com/docs/whatsapp/cloud-api/get-started) - WhatsApp Cloud API credentials
+
+3. **WhatsApp Setup**:
+   - Business phone number registered with Meta
+   - Webhook URL (for receiving messages)
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Clone or Download the Project
+```bash
+cd c:\Users\hp\Desktop\mechanic-bot
+```
+
+### 2. Install Dependencies
+```bash
+pip install fastapi uvicorn python-dotenv groq google-genai requests
+```
+
+### 3. Create `.env` File
+Create a file named `.env` in the project root and add your credentials:
+```
+GROQ_API_KEY=your_groq_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+WHATSAPP_TOKEN=your_whatsapp_access_token
+WHATSAPP_PHONE_ID=your_phone_number_id
+VERIFY_TOKEN=your_custom_verification_token
+```
+
+### 4. Create `inventory.json`
+Create an `inventory.json` file with your car parts inventory:
+```json
+[
+  {
+    "part_name": "Alternator",
+    "car_model": "Honda Accord",
+    "year": 2006,
+    "price_NGN": 15000,
+    "stock_qty": 5,
+    "location": "Lagos Warehouse"
+  },
+  {
+    "part_name": "Starter Motor",
+    "car_model": "Toyota Camry",
+    "year": 2010,
+    "price_NGN": 8500,
+    "stock_qty": 3,
+    "location": "Abuja Store"
+  }
+]
+```
+
+### 5. Run the Server
+```bash
+python main.py
+```
+The bot will start on `http://0.0.0.0:8000`
+
+---
+
+## 📡 How It Works
+
+### Image Processing Flow
+1. User sends a **photo** of a car part via WhatsApp
+2. Bot fetches the image from Meta's servers (authenticated)
+3. **Gemini Vision AI** analyzes the image and describes the part
+4. **Llama 3 (Groq)** extracts the exact part name and car model
+5. Bot searches the `inventory.json` for a match
+6. Bot sends back pricing, stock availability, and location
+
+### Text Processing Flow
+1. User sends a **text message** describing the part (e.g., "Honda Accord alternator")
+2. **Llama 3 (Groq)** parses the text and extracts part name + model
+3. Bot searches inventory using fuzzy matching
+4. Bot responds with matching parts or suggests sending a photo
+
+---
+
+## 🔑 Environment Variables Explained
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GROQ_API_KEY` | Your Groq API key (free at console.groq.com) | `gsk_xxxx...` |
+| `GEMINI_API_KEY` | Your Google Gemini API key (free at aistudio.google.com) | `AIzaSy...` |
+| `WHATSAPP_TOKEN` | Meta WhatsApp access token (from Meta Dashboard) | `EAAxxxxx...` |
+| `WHATSAPP_PHONE_ID` | Your WhatsApp Business phone number ID | `123456789` |
+| `VERIFY_TOKEN` | Custom token for webhook verification (you create this) | `my_secure_token` |
+
+---
+
+## 📁 Project Structure
+
+```
+mechanic-bot/
+├── main.py              # Main FastAPI application
+├── inventory.json       # Car parts inventory database
+├── .env                 # Environment variables (create this)
+└── README               # This file
+```
+
+---
+
+## 🌐 Webhook Setup (WhatsApp Integration)
+
+1. **Expose Your Local Server** (use ngrok for testing):
+   ```bash
+   ngrok http 8000
+   ```
+   Copy the public URL (e.g., `https://abc123.ngrok.io`)
+
+2. **Configure in Meta Dashboard**:
+   - Go to [Meta for Developers](https://developers.facebook.com)
+   - Select your WhatsApp Business App
+   - Navigate to **Configuration** → **Webhooks**
+   - Set Webhook URL: `https://your-url.ngrok.io/webhook`
+   - Set Verify Token: (same as `VERIFY_TOKEN` in `.env`)
+
+3. **Subscribe to Messages**:
+   - In the webhook settings, subscribe to the `messages` and `message_status` events
+
+---
+
+## 💬 Usage Examples
+
+### Example 1: User Sends a Photo
+**User**: *Sends photo of an alternator*
+**Bot**: 
+```
+✅ IDENTIFIED: Alternator (2006).
+Price: N15,000.
+Stock: 5 available. Located at Lagos Warehouse.
+Do you want me to reserve this for you?
+```
+
+### Example 2: User Sends Text
+**User**: "I need a starter motor for my 2010 Toyota Camry"
+**Bot**:
+```
+✅ TEXT SEARCH: Starter Motor (2010) found.
+Price: N8,500.
+Stock: 3 available.
+```
+
+### Example 3: Part Not Found
+**User**: *Sends photo of rare part*
+**Bot**:
+```
+🔍 Identified: Transmission Control Module. I can't find an exact match in our inventory right now.
+Please try another angle or text the part number for a manual search.
+```
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "Gemini Client not initialized" | Check your `GEMINI_API_KEY` in `.env` |
+| WhatsApp messages not received | Verify `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_ID` |
+| Webhook verification fails | Ensure `VERIFY_TOKEN` matches in Meta Dashboard |
+| Inventory not loading | Check `inventory.json` is valid JSON and in the root directory |
+| "Critical Processing Error" | Ensure image URL is accessible; check your WhatsApp token expiration |
+
+---
+
+## 📊 API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/` | GET | Health check |
+| `/webhook` | GET | WhatsApp webhook verification |
+| `/webhook` | POST | Receive incoming WhatsApp messages |
+
+---
+
+## 🔐 Security Best Practices
+
+1. **Never commit `.env` file** to version control
+2. **Rotate API keys regularly** from your respective dashboards
+3. **Use HTTPS** for production webhooks
+4. **Validate all incoming requests** from WhatsApp
+5. **Monitor API usage** to detect unusual activity
+
+---
+
+## 📝 Customization
+
+### Adding More Inventory Fields
+Edit `inventory.json` to include additional fields:
+```json
+{
+  "part_name": "...",
+  "car_model": "...",
+  "year": 2020,
+  "price_NGN": 25000,
+  "stock_qty": 10,
+  "location": "...",
+  "supplier": "XYZ Parts Co.",
+  "warranty_months": 12
+}
+```
+
+### Changing Search Logic
+Modify the search algorithm in `main.py` around line 180-185 to match part names differently (e.g., fuzzy matching with `difflib`).
+
+### Custom Prompts
+Edit `VISION_PROMPT` and `LLAMA_PROMPT` strings to change how the bot analyzes images and text.
+
+---
+
+## 🚢 Deployment
+
+For production, deploy on platforms like:
+- **Render** (free tier available)
+- **Heroku** (paid)
+- **Railway** (simple deployment)
+- **AWS EC2** (scalable)
+
+Replace `localhost` with your production domain in WhatsApp webhook settings.
+
+---
+
+## 📞 Support & Contributions
+
+- **Issues?** Check the Troubleshooting section above
+- **Feature requests?** Modify the code to suit your needs
+- **API Limits?** Groq and Gemini free tiers have usage limits; upgrade if needed
+
+---
+
+## 📄 License
+
+This project is open-source. Feel free to use and modify it for your business needs.
+
+---
+
+## 🎯 Future Enhancements
+
+- [ ] Database integration (PostgreSQL) instead of JSON
+- [ ] Multi-language support
+- [ ] Reservation/booking system
+- [ ] Payment integration
+- [ ] Admin dashboard for inventory management
+- [ ] Image similarity matching for better part identification
+- [ ] Customer history tracking
+
+---
+
+**Happy part hunting! 🔧**
