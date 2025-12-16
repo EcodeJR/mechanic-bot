@@ -34,5 +34,77 @@
     "price_NGN": 8500,
     "stock_qty": 50,
     "location": "Aisle D-8"
+  },
+  {
+    "part_id": "BMW005",
+    "part_name": "BMW X5 (2012) Fuel Pump",
+    "vehicle": "BMW X5",
+    "year": "2010-2013",
+    "price_NGN": 62000,
+    "stock_qty": 5,
+    "location": "Aisle E-4"
+  },
+  {
+    "part_id": "FOR006",
+    "part_name": "Ford Focus (2011) Radiator",
+    "vehicle": "Ford Focus",
+    "year": "2008-2011",
+    "price_NGN": 40000,
+    "stock_qty": 3,
+    "location": "Aisle F-2"
+  },
+  {
+    "part_id": "NISS007",
+    "part_name": "Nissan Altima (2013) Rearview Mirror",
+    "vehicle": "Nissan Altima",
+    "year": "2010-2015",
+    "price_NGN": 12000,
+    "stock_qty": 15,
+    "location": "Aisle G-5"
+  },
+  {
+    "part_id": "VW008",
+    "part_name": "Volkswagen Golf (2014) Clutch Kit",
+    "vehicle": "Volkswagen Golf",
+    "year": "2012-2016",
+    "price_NGN": 55000,
+    "stock_qty": 7,
+    "location": "Aisle H-3"
+  },
+  {
+    "part_id": "AUDI009",
+    "part_name": "Audi A4 (2016) Turbocharger",
+    "vehicle": "Audi A4",
+    "year": "2015-2018",
+    "price_NGN": 95000,
+    "stock_qty": 1,
+    "location": "Bulk Storage"
+  },
+  {
+    "part_id": "CHEV010",
+    "part_name": "Chevrolet Malibu (2012) Suspension Strut",
+    "vehicle": "Chevrolet Malibu",
+    "year": "2010-2013",
+    "price_NGN": 30000,
+    "stock_qty": 6,
+    "location": "Aisle I-7"
+  },
+  {
+    "part_id": "HYUN011",
+    "part_name": "Hyundai Sonata (2015) Timing Belt",
+    "vehicle": "Hyundai Sonata",
+    "year": "2011-2015",
+    "price_NGN": 15000,
+    "stock_qty": 20,
+    "location": "Aisle J-2"
+  },
+  {
+    "part_id": "KIA012",
+    "part_name": "Kia Sportage (2014) CV Joint",
+    "vehicle": "Kia Sportage",
+    "year": "2010-2015",
+    "price_NGN": 22000,
+    "stock_qty": 8,
+    "location": "Aisle K-4"
   }
 ]
