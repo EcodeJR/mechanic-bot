@@ -185,9 +185,9 @@ async def receive_message(request: Request):
                     best_match = item
             
             if highest_score > 60:
-                reply = f"✅ Found: {best_match['part_name']} ({best_match['vehicle']})\n💰 Price: N{best_match['price_NGN']:,}"
+                reply = f"✅ Found: {best_match['part_name']} ({best_match['vehicle']})\n💰 Price: N{best_match['price_NGN']:,} \n 📌 Location: {best_match['location']}"
             else:
-                reply = f"Sorry, I couldn't find a {search_part} for {search_model}. Please double check the model name."
+                reply = f"Sorry, I couldn't find a {search_part} for {search_model}. We may not have it in stock currently, check back in a few days or Please double check the model name(You may have sent the wrong model or year.)."
                 
             send_whatsapp_message(sender_id, reply)
 
