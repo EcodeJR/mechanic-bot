@@ -30,7 +30,7 @@ def load_inventory():
     try:
         # Try MERN Backend (Update this URL after hosting on Vercel)
         
-        api_url = os.getenv("API_URL")
+        api_url = os.getenv("API_URL", "https://inventory-mng-backend.vercel.app/api/inventory")
         response = requests.get(api_url, timeout=5)
         if response.status_code == 200:
             INVENTORY = response.json()
