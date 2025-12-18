@@ -8,6 +8,7 @@ from groq import Groq
 from google import genai 
 from google.genai import types 
 import uvicorn
+from fastapi.responses import PlainTextResponse
 
 load_dotenv()
 app = FastAPI()
@@ -77,6 +78,23 @@ async def home():
         "inventory_count": len(INVENTORY),
         "database_status": "Connected" if INVENTORY else "Empty/Offline"
     }
+    
+@app.get("/webhook")
+async def verify_webhook(request: Request):
+    # This must match exactly what you have in Render/Meta
+    token = os.getenv("VERIFY_TOKEN") 
+    
+    query = request.query_params
+    mode = query.get("hub.mode")
+    verify_token = query.get("hub.verify_token")
+    challenge = query.get("hub.challenge")
+    
+    if mode == "subscribe" and verify_token == token:
+        print("✅ Webhook Verified Successfully!")
+        return PlainTextResponse(content=challenge) # Must be plain text
+    
+    print("❌ Verification Failed: Token Mismatch")
+    raise HTTPException(status_code=403, detail="Verification failed")
 @app.post("/webhook")
 async def receive_message(request: Request):
     data = await request.json()
