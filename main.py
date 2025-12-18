@@ -70,7 +70,13 @@ def send_whatsapp_message(recipient_id, message_text):
     requests.post(url, headers=headers, json=data)
 
 # --- 3. ENDPOINTS ---
-
+@app.get("/")
+async def home():
+    return {
+        "status": "Mechanic Bot Online", 
+        "inventory_count": len(INVENTORY),
+        "database_status": "Connected" if INVENTORY else "Empty/Offline"
+    }
 @app.post("/webhook")
 async def receive_message(request: Request):
     data = await request.json()
