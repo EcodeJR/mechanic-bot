@@ -29,7 +29,8 @@ def load_inventory():
     global INVENTORY
     try:
         # Try MERN Backend (Update this URL after hosting on Vercel)
-        api_url = "http://localhost:5000/api/products"
+        
+        api_url = os.getenv("API_URL")
         response = requests.get(api_url, timeout=5)
         if response.status_code == 200:
             INVENTORY = response.json()
