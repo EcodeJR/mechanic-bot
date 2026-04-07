@@ -12,6 +12,7 @@ A WhatsApp chatbot that helps users identify and find car parts using AI vision 
 - **WhatsApp Integration**: Seamless WhatsApp Cloud API integration for messaging
 - **Fast & Free LLM**: Uses Groq's Llama 3.1 for intelligent part extraction
 - **Real-time Responses**: Instant part identification and availability checks
+- **PartFindr Backend Mode**: Uses the monorepo backend bot endpoints for live marketplace search and analytics logging
 
 ---
 
@@ -121,6 +122,26 @@ The bot will start on `http://0.0.0.0:8000`
 | `WHATSAPP_TOKEN` | Meta WhatsApp access token (from Meta Dashboard) | `EAAxxxxx...` |
 | `WHATSAPP_PHONE_ID` | Your WhatsApp Business phone number ID | `123456789` |
 | `VERIFY_TOKEN` | Custom token for webhook verification (you create this) | `my_secure_token` |
+| `PARTFINDR_API_URL` | PartFindr backend API base URL | `http://localhost:5000/api/v1` |
+| `PARTFINDR_BOT_SECRET` | Bot secret header value (`X-Bot-Secret`) | `replace_me` |
+
+---
+
+## 🔌 PartFindr Integration
+
+This bot now fits into the PartFindr monorepo as a WhatsApp channel adapter:
+
+1. Keep Python `mechanic-bot` for WhatsApp webhook handling and media retrieval.
+2. Send extracted part queries to `POST /api/v1/bot/search` in PartFindr backend.
+3. Log each conversation to `POST /api/v1/bot/sessions` for analytics.
+4. If backend is unavailable, fallback to local `inventory.json` search automatically.
+
+Set these environment variables in `mechanic-bot/.env` to enable integration:
+
+```
+PARTFINDR_API_URL=http://localhost:5000/api/v1
+PARTFINDR_BOT_SECRET=replace_me
+```
 
 ---
 
