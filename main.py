@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 import traceback
 from typing import Any, Dict, List, Optional
@@ -25,6 +26,22 @@ except Exception as e:
     gemini_client = None 
 
 USER_SESSIONS = {}
+
+def get_session(sender_id: str) -> tuple[List[Dict[str, str]], bool]:
+    now = time.time()
+    session = USER_SESSIONS.get(sender_id)
+    reset_happened = False
+    if session:
+        if now - session.get('last_updated', 0) > 86400:
+            session = {"history": [], "last_updated": now}
+            reset_happened = True
+        else:
+            session['last_updated'] = now
+    else:
+        session = {"history": [], "last_updated": now}
+        
+    USER_SESSIONS[sender_id] = session
+    return session["history"], reset_happened
 INVENTORY = []
 BACKEND_API_URL = os.getenv("PARTFINDR_API_URL", "http://localhost:5000/api/v1")
 BOT_SECRET = os.getenv("PARTFINDR_BOT_SECRET", os.getenv("WHATSAPP_TOKEN", ""))
@@ -61,11 +78,13 @@ def load_inventory():
 load_inventory()
 
 def calculate_match_score(query_str, target_str):
-    if not query_str or not target_str: return 0
+    if not query_str or not target_str:
+        return 0
     query_words = set(query_str.lower().split())
     target_words = set(target_str.lower().split())
     common = query_words.intersection(target_words)
-    if not common: return 0
+    if not common:
+        return 0
     # Returns percentage of overlap
     return (len(common) / len(query_words)) * 100
 
@@ -120,10 +139,11 @@ def format_backend_result(results: List[Dict[str, Any]]) -> str:
         price = item.get("price", 0)
         lines.append(
             f"{idx}. {item.get('partName', 'Part')} | {item.get('sellerName', 'Seller')} | N{price:,}\n"
-            f"   ⭐ {item.get('sellerRating', 0)} | {item.get('sellerLocation', 'Unknown')}"
+            f"   ⭐ {item.get('sellerRating', 0)} | {item.get('sellerLocation', 'Unknown')}\n"
+            f"   🔗 View part: {item.get('productPageUrl', 'No link available')}"
         )
 
-    return "\n".join(lines)
+    return "\n\n".join(lines)
 
 def send_whatsapp_message(recipient_id, message_text):
     url = f"https://graph.facebook.com/v19.0/{os.getenv('WHATSAPP_PHONE_ID')}/messages"
@@ -166,91 +186,85 @@ async def receive_message(request: Request):
     data = await request.json()
     try: 
         entry = data["entry"][0]["changes"][0]["value"]
-        if "messages" not in entry: return {"status": "ok"}
+        if "messages" not in entry:
+            return {"status": "ok"}
         
         message = entry["messages"][0]
         sender_id = message["from"]
         
-        # --- IMAGE PROCESSING ---
+        # --- MESSAGE PROCESSING ---
+        is_image = False
+        media_url = ""
+        
         if message.get("type") == "image":
+            is_image = True
             image_id = message["image"]["id"]
             headers = {"Authorization": f"Bearer {os.getenv('WHATSAPP_TOKEN')}"}
             media_url = requests.get(f"https://graph.facebook.com/v19.0/{image_id}", headers=headers).json()["url"]
             image_bytes = requests.get(media_url, headers=headers).content
             
-            # 1. Vision with Strict Prompting (Fixed Model String)
+            # 1. Vision Analysis
             image_part = types.Part.from_bytes(data=image_bytes, mime_type='image/jpeg')
             vision_res = gemini_client.models.generate_content(
-                model='gemini-robotics-er-1.5-preview', # Added 'models/' prefix to fix 404
+                model='gemini-2.0-flash', 
                 contents=[image_part, "Identify the car part. Format: 'PART: [name] | MODEL: [car]'. If model unknown, say 'MODEL: Unknown'. Be extremely concise."]
             )
             description = vision_res.text.strip()
-            print(f"AI Vision Raw: {description}")
-
-            # 2. Llama Cleaning (Strict instruction to avoid explanations)
-            llama_res = groq_client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": f"Extract ONLY 'PartName - CarModel' from: '{description}'. No sentences. No explanations. Example: 'Brake Pads - Lexus RX350'."}]
-            )
-            extracted_text = llama_res.choices[0].message.content.strip()
-            print(f"Extracted: {extracted_text}")
-
-            try: search_part, search_model = extracted_text.lower().split(' - ', 1)
-            except: search_part, search_model = extracted_text.lower(), "unknown"
-
-            backend_results = search_partfindr_backend(f"{search_part} {search_model}".strip())
-
-            # 3. Final Response Logic
-            if backend_results:
-                reply = format_backend_result(backend_results)
-            else:
-                best_match, highest_score = local_best_match(search_part, search_model)
-                if best_match and highest_score > 65:
-                    reply = (
-                        f"✅ Found: {best_match['part_name']}\n"
-                        f"🚙 Vehicle: {best_match['vehicle']}\n"
-                        f"💰 Price: N{best_match['price_NGN']:,}\n"
-                        f"📦 Stock: {best_match['stock_qty']}"
-                    )
-                elif "unknown" in search_model or highest_score < 40:
-                    USER_SESSIONS[sender_id] = {"part_name": search_part}
-                    reply = f"🔧 I've identified this as a **{search_part.title()}**.\n\nWhich **Car Model and Year** do you need this for?"
-                else:
-                    reply = f"🔍 I identified a {search_part}, but no exact match for {search_model} in inventory."
-
-            log_partfindr_session(
-                {
-                    "whatsappNumber": sender_id,
-                    "imageUrl": media_url,
-                    "identifiedPart": {
-                        "name": search_part.title(),
-                        "category": "unknown",
-                        "confidence": 0.8,
-                    },
-                    "searchQuery": f"{search_part} {search_model}".strip(),
-                    "resultsReturned": len(backend_results),
-                    "wasSuccessful": bool(backend_results),
-                }
-            )
-
-            send_whatsapp_message(sender_id, reply)
-
-        # --- TEXT PROCESSING ---
+            text_body = f"[User sent an image. AI identified it as: {description}]"
+            
         elif message.get("type") == "text":
-            text_body = message["text"]["body"].lower()
+            text_body = message["text"]["body"].strip()
+        else:
+            return {"status": "ok"}
 
-            if sender_id in USER_SESSIONS:
-                saved_part = USER_SESSIONS.pop(sender_id)["part_name"]
-                search_part, search_model = saved_part, text_body
-            else:
-                # Fixed Llama prompt to stop it from writing essays
-                llama_res = groq_client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": f"Extract ONLY 'PartName - CarModel' from: '{text_body}'. No extra text. Output Example: 'Headlamp - Toyota Corolla'."}]
-                )
-                extracted_text = llama_res.choices[0].message.content.strip().lower()
-                try: search_part, search_model = extracted_text.split(' - ', 1)
-                except: search_part, search_model = extracted_text, "unknown"
+        # --- CONVERSATIONAL ROUTER ---
+        history, reset_happened = get_session(sender_id)
+        if reset_happened:
+            send_whatsapp_message(sender_id, "*(System Note: To keep things running smoothly, I reset our conversation memory every 24 hours. What can I help you with today?)*")
+
+        history.append({"role": "user", "content": text_body})
+        if len(history) > 10:
+            history = history[-10:]
+            USER_SESSIONS[sender_id]["history"] = history
+
+        sys_prompt = """You are a professional, friendly auto mechanic for PartFindr.
+Determine if the user is just chatting or trying to search for a car part.
+If they are chatting, saying hi, or asking questions, respond nicely as a mechanic. 
+If they need a part or sent an image but you need more info (like car model/year), politely ask for it and give tips on where they can find it (e.g. check the owner's manual, look at the VIN, etc).
+If they provide enough info to search for a part, extract the part name and vehicle model.
+
+You MUST respond in valid JSON matching this schema:
+{
+  "intent": "CHAT" or "SEARCH",
+  "reply": "Your conversational response here (only required if intent is CHAT, otherwise null)",
+  "search_part": "Extracted part name or null",
+  "search_model": "Extracted vehicle model or null"
+}"""
+        messages = [{"role": "system", "content": sys_prompt}] + history
+
+        try:
+            # Using Llama 3 for structured JSON extraction
+            llama_res = groq_client.chat.completions.create(
+                model="llama-3.1-8b-instant", 
+                messages=messages,
+                response_format={"type": "json_object"}
+            )
+            response_data = json.loads(llama_res.choices[0].message.content)
+        except Exception as e:
+            print(f"❌ JSON Parse Error: {e}")
+            response_data = {"intent": "CHAT", "reply": "Sorry, I had a little trouble understanding that. Could you say it differently?"}
+
+        if response_data.get("intent") == "CHAT":
+            reply = response_data.get("reply", "How can I help you?")
+            history.append({"role": "assistant", "content": reply})
+            send_whatsapp_message(sender_id, reply)
+        else:
+            search_part = response_data.get("search_part") or "part"
+            search_model = response_data.get("search_model") or "unknown"
+            search_part = str(search_part).lower()
+            search_model = str(search_model).lower()
+
+            send_whatsapp_message(sender_id, f"🔍 Searching for '{search_part.title()}'...")
 
             backend_results = search_partfindr_backend(f"{search_part} {search_model}".strip())
 
@@ -261,18 +275,19 @@ async def receive_message(request: Request):
                 if best_match and highest_score > 60:
                     reply = f"✅ Found: {best_match['part_name']} ({best_match['vehicle']})\n💰 Price: N{best_match['price_NGN']:,} \n 📌 Location: {best_match['location']}"
                 else:
-                    reply = f"Sorry, I couldn't find a {search_part} for {search_model}. We may not have it in stock currently, check back in a few days or Please double check the model name(You may have sent the wrong model or year.)."
+                    reply = f"Sorry, I couldn't find a '{search_part}' for '{search_model}'. We may not have it in stock currently. Please double check the vehicle model or year."
 
+            history.append({"role": "assistant", "content": f"Returned {len(backend_results)} search results."})
             send_whatsapp_message(sender_id, reply)
 
             log_partfindr_session(
                 {
                     "whatsappNumber": sender_id,
-                    "imageUrl": "https://partfindr.local/text-query",
+                    "imageUrl": media_url if is_image else "https://partfindr.local/text-query",
                     "identifiedPart": {
                         "name": search_part.title(),
                         "category": "unknown",
-                        "confidence": 0.7,
+                        "confidence": 0.8 if is_image else 0.7,
                     },
                     "searchQuery": f"{search_part} {search_model}".strip(),
                     "resultsReturned": len(backend_results),
@@ -280,8 +295,14 @@ async def receive_message(request: Request):
                 }
             )
 
-    except Exception:
+    except Exception as e:
+        print(f"❌ Webhook Error: {e}")
         traceback.print_exc()
+        try:
+            if 'sender_id' in locals():
+                send_whatsapp_message(sender_id, "🔧 Oops! I encountered an unexpected error while processing your request. Please try again later.")
+        except Exception as fallback_err:
+            print(f"❌ Failed to send fallback error message: {fallback_err}")
 
     return {"status": "ok"}
 
